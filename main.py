@@ -2,41 +2,22 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# BASE DE CONOCIMIENTO (Reglas)
+# BASE DE CONOCIMIENTO
 reglas_diagnostico = [
-    {
-        "sintomas": ["no enciende", "sin ruidos"],
-        "diagnostico": "Fallo en la fuente de poder o cable desconectado.",
-        "certeza": 0.9
-    },
-    {
-        "sintomas": ["no enciende", "pitidos continuos"],
-        "diagnostico": "Error en la memoria RAM. Verifique que esté bien conectada.",
-        "certeza": 0.85
-    },
-    {
-        "sintomas": ["enciende", "pantalla azul"],
-        "diagnostico": "Conflicto de drivers o falla crítica de hardware (posible disco duro).",
-        "certeza": 0.75
-    },
-    {
-        "sintomas": ["lento", "ruido rasgueo"],
-        "diagnostico": "Disco duro mecánico (HDD) a punto de fallar. Respalde sus datos inmediatamente.",
-        "certeza": 0.95
-    }
+    {"sintomas": ["no enciende", "sin ruidos"], "diagnostico": "Fallo en la fuente de poder o cable desconectado.", "certeza": 0.9},
+    {"sintomas": ["no enciende", "pitidos continuos"], "diagnostico": "Error en la memoria RAM.", "certeza": 0.85},
+    {"sintomas": ["enciende", "pantalla azul"], "diagnostico": "Conflicto de drivers o falla de hardware.", "certeza": 0.75},
+    {"sintomas": ["lento", "ruido rasgueo"], "diagnostico": "Disco duro a punto de fallar.", "certeza": 0.95}
 ]
 
 # MOTOR DE INFERENCIA
 def evaluar_sintomas(sintomas_usuario):
-
     mejor_coincidencia = {
-        "diagnostico": "No se pudo determinar el problema. Consulte a un técnico presencial.",
+        "diagnostico": "No se pudo determinar el problema.",
         "certeza": 0.0
     }
 
-    # Forward Chaining
     for regla in reglas_diagnostico:
-
         match = all(
             sintoma in sintomas_usuario
             for sintoma in regla["sintomas"]
@@ -47,40 +28,31 @@ def evaluar_sintomas(sintomas_usuario):
 
     return mejor_coincidencia
 
+# RUTA PRINCIPAL
+@app.route("/")
+def inicio():
+    return "API del Sistema Experto funcionando correctamente"
 
-# ENDPOINT API REST
-@app.route("/diagnostico", methods=["POST", "OPTIONS"])
-def api_sistema_experto():
+# ENDPOINT API
+@app.route("/diagnostico", methods=["POST", "GET"])
+def diagnostico():
 
-    headers = {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Methods": "POST, OPTIONS"
-    }
+    # Si alguien abre la URL en el navegador
+    if request.method == "GET":
+        return jsonify({
+            "mensaje": "Use POST para enviar síntomas"
+        })
 
-    # Preflight CORS
-    if request.method == "OPTIONS":
-        return ("", 204, headers)
+    datos = request.get_json()
 
-    request_json = request.get_json(silent=True)
+    if not datos or "sintomas" not in datos:
+        return jsonify({
+            "error": "Debe enviar síntomas"
+        }), 400
 
-    if request_json and "sintomas" in request_json:
+    resultado = evaluar_sintomas(datos["sintomas"])
 
-        sintomas_usuario = request_json["sintomas"]
-
-        resultado = evaluar_sintomas(sintomas_usuario)
-
-        return (jsonify(resultado), 200, headers)
-
-    else:
-        return (
-            jsonify({
-                "error": "Debe enviar una lista de síntomas."
-            }),
-            400,
-            headers
-        )
-
+    return jsonify(resultado)
 
 if __name__ == "__main__":
     app.run(debug=True)
