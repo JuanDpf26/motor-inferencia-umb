@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 
 app = Flask(__name__)
 
@@ -12,12 +12,14 @@ reglas_diagnostico = [
 
 # MOTOR DE INFERENCIA
 def evaluar_sintomas(sintomas_usuario):
+
     mejor_coincidencia = {
         "diagnostico": "No se pudo determinar el problema.",
         "certeza": 0.0
     }
 
     for regla in reglas_diagnostico:
+
         match = all(
             sintoma in sintomas_usuario
             for sintoma in regla["sintomas"]
@@ -28,20 +30,14 @@ def evaluar_sintomas(sintomas_usuario):
 
     return mejor_coincidencia
 
-# RUTA PRINCIPAL
+# MOSTRAR INTERFAZ HTML
 @app.route("/")
 def inicio():
-    return "API del Sistema Experto funcionando correctamente"
+    return render_template("index.html")
 
-# ENDPOINT API
-@app.route("/diagnostico", methods=["POST", "GET"])
+# API REST
+@app.route("/diagnostico", methods=["POST"])
 def diagnostico():
-
-    # Si alguien abre la URL en el navegador
-    if request.method == "GET":
-        return jsonify({
-            "mensaje": "Use POST para enviar síntomas"
-        })
 
     datos = request.get_json()
 
